@@ -1,6 +1,9 @@
-// Cloudflare Pages settings. Deploy with: npm run deploy
+// Cloudflare settings: serves the static site from ./out. Deploy with: npm run deploy
 {
   "name": "aniv-invitation",
-  "pages_build_output_dir": "out",
-  "compatibility_date": "2026-11-01"
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": "./out",
+    "not_found_handling": "404-page"
+  }
 }
