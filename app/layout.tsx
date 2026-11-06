@@ -13,7 +13,6 @@ const sans = Inter({ weight: ["400", "500", "600"], subsets: ["latin"], variable
 
 export const metadata: Metadata = {
   title: "Our First Anniversary",
-  description: "You're invited to our first anniversary date — December 7.",
 };
 
 export const viewport: Viewport = {

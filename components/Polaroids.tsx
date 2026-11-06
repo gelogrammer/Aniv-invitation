@@ -2,30 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { MEMORIES } from "@/lib/config";
+import { photoUrl, removePhoto, uploadPhoto, useMemories } from "@/lib/memories";
 import { burstHearts } from "./FloatingHearts";
-
-const key = (id: string) => `aniv-memory-${id}`;
-const load = (id: string) => { try { return localStorage.getItem(key(id)); } catch { return null; } };
-const save = (id: string, v: string) => { localStorage.setItem(key(id), v); }; // throws if full
-const remove = (id: string) => { try { localStorage.removeItem(key(id)); } catch {} };
-
-/** Shrink a phone photo so it fits comfortably in the browser's storage. */
-async function compress(file: File, max = 900): Promise<string> {
-  const url = URL.createObjectURL(file);
-  try {
-    const img = new Image();
-    img.src = url;
-    await img.decode();
-    const scale = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.round(img.naturalWidth * scale);
-    canvas.height = Math.round(img.naturalHeight * scale);
-    canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL("image/jpeg", 0.82);
-  } finally {
-    URL.revokeObjectURL(url);
-  }
-}
 
 const LockIcon = () => (
   <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -42,18 +20,18 @@ const CameraIcon = () => (
 );
 
 function Polaroid({ memory, index }: { memory: (typeof MEMORIES)[number]; index: number }) {
-  const [photo, setPhoto] = useState<string | null>(null);
-  const [unlocked, setUnlocked] = useState(false);
+  const { versions, owner } = useMemories();
+  const [dateReached, setDateReached] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const input = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setPhoto(load(memory.id));
-    // ?preview in the URL unlocks everything, so you can test before December
-    const preview = new URLSearchParams(window.location.search).has("preview");
-    setUnlocked(preview || Date.now() >= new Date(memory.unlocks).getTime());
+    setDateReached(Date.now() >= new Date(memory.unlocks).getTime());
   }, [memory]);
+
+  const photo = photoUrl(memory.id, versions);
+  const canUpload = owner || dateReached;
 
   const onPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -62,20 +40,24 @@ function Polaroid({ memory, index }: { memory: (typeof MEMORIES)[number]; index:
     setBusy(true);
     setError("");
     try {
-      const data = await compress(file);
-      save(memory.id, data);
-      setPhoto(data);
+      await uploadPhoto(memory.id, file);
       burstHearts();
-    } catch {
-      setError("Couldn't save that photo. Try a different one?");
+    } catch (err) {
+      setError(err instanceof Error && err.message !== "Upload failed"
+        ? err.message
+        : "Couldn't upload that photo. Check your internet and try again?");
     } finally {
       setBusy(false);
     }
   };
 
-  const clear = () => {
-    remove(memory.id);
-    setPhoto(null);
+  const clear = async () => {
+    if (!window.confirm("Remove this photo from the polaroid?")) return;
+    try {
+      await removePhoto(memory.id);
+    } catch {
+      setError("Couldn't remove it. Try again?");
+    }
   };
 
   const tilt = [-3, 2, -1.5][index % 3];
@@ -87,10 +69,10 @@ function Polaroid({ memory, index }: { memory: (typeof MEMORIES)[number]; index:
       {photo ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img className="polaroid-photo" src={photo} alt={`Our photo from ${memory.date}`} />
-      ) : unlocked ? (
+      ) : canUpload ? (
         <button className="polaroid-photo empty" onClick={() => input.current?.click()} disabled={busy}>
           <CameraIcon />
-          <span>{busy ? "Saving…" : "Tap to add our photo"}</span>
+          <span>{busy ? "Uploading…" : "Tap to add our photo"}</span>
         </button>
       ) : (
         <div className="polaroid-photo empty locked">
@@ -107,9 +89,13 @@ function Polaroid({ memory, index }: { memory: (typeof MEMORIES)[number]; index:
 
       {photo && (
         <div className="polaroid-actions">
-          <button onClick={() => input.current?.click()}>Change</button>
+          {canUpload && (
+            <button onClick={() => input.current?.click()} disabled={busy}>
+              {busy ? "Uploading…" : "Change"}
+            </button>
+          )}
           <a href={photo} download={`our-${memory.id}-${memory.date.replace(" ", "-")}.jpg`}>Save</a>
-          <button onClick={clear}>Remove</button>
+          {owner && <button onClick={clear}>Remove</button>}
         </div>
       )}
       {error && <p className="polaroid-error" role="alert">{error}</p>}
@@ -124,7 +110,7 @@ export default function Polaroids() {
       <div className="title">Three empty polaroids</div>
       <p className="lead">
         After each date, come back here and add your favorite photo of us.
-        Each polaroid opens on its day.
+        Each polaroid opens on its day, and it shows up on our love route too.
       </p>
       <div className="polaroid-row">
         {MEMORIES.map((m, i) => (

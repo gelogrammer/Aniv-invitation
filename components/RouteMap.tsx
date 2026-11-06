@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CHURCH, config, type Branch } from "@/lib/config";
+import { CHURCH, MEMORIES, config, type Branch } from "@/lib/config";
+import { photoUrl, useMemories } from "@/lib/memories";
 
 // Everything is drawn in one 360×460 picture, so it scales the same on every phone
 const ROUTE =
@@ -60,6 +61,7 @@ export default function RouteMap({ branch }: { branch: Branch }) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [f, setFonts] = useState<Fonts>(FALLBACK_FONTS);
+  const { versions } = useMemories();
 
   // Use the exact font names the page loaded, so the picture matches
   useEffect(() => {
@@ -148,6 +150,30 @@ export default function RouteMap({ branch }: { branch: Branch }) {
             <Pin x={270} y={205} n={2} delay={1.05} f={f} />
             <Pin x={110} y={335} n={3} last delay={1.5} f={f} />
           </svg>
+        </div>
+
+        <div className="rm-polaroids">
+          {MEMORIES.map((m, i) => {
+            const src = photoUrl(m.id, versions);
+            return (
+              <figure key={m.id} className={`rm-polaroid ${src ? "filled" : ""}`} style={{ "--tilt": `${[-4, 3, -2][i]}deg` } as React.CSSProperties}>
+                <span className={`rm-badge ${i === 2 ? "last" : ""}`} aria-hidden="true">{i === 2 ? "♥" : i + 1}</span>
+                {src ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={src} alt={`Our photo from ${m.date}`} />
+                ) : (
+                  <div className="rm-polaroid-empty" aria-label={`Empty polaroid for ${m.date}`}>
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" />
+                      <circle cx="12" cy="13.5" r="3.5" />
+                    </svg>
+                    <span>soon</span>
+                  </div>
+                )}
+                <figcaption>{m.date}</figcaption>
+              </figure>
+            );
+          })}
         </div>
 
         <div className="rm-sign">{config.from} <span>♥</span> {config.herName} · December 2026</div>

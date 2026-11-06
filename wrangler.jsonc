@@ -1,9 +1,9 @@
-// Cloudflare settings: serves the static site from ./out. Deploy with: npm run deploy
+// Cloudflare Pages settings → https://happy-1st-anniversary-mylove.pages.dev
+// Deploy with: npm run deploy
 {
-  "name": "aniv-invitation",
+  "name": "happy-1st-anniversary-mylove",
+  "pages_build_output_dir": "./out",
   "compatibility_date": "2026-11-01",
-  "assets": {
-    "directory": "./out",
-    "not_found_handling": "404-page"
-  }
+  // Uploaded polaroid photos (see functions/api/memories)
+  "kv_namespaces": [{ "binding": "MEMORIES", "id": "f179593fb34548978b09aeca7a12a565" }]
 }

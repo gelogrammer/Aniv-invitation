@@ -35,9 +35,14 @@ export default function Home() {
           <div className="note">
             {config.herName},
             <br /><br />
-            A year ago, I got lucky. Every day since has been better because you&apos;re in it.
-            One date isn&apos;t enough to celebrate that, so I planned three.
-            Will you spend our anniversary weekend with me?
+            A year ago, I got lucky. I found someone who loves me, supports me in everything I do,
+            and stays by my side through all my ups and downs.
+            Thank you for believing in me, even when I don&apos;t believe in myself.
+            <br /><br />
+            Even now, I still can&apos;t wait to see you every single day,
+            kahit magkasama na tayo sa iisang bubong.
+            <br /><br />
+            <strong>Happy anniversary, my love!</strong>
             <span className="sig">— {config.from}</span>
           </div>
         </Reveal>

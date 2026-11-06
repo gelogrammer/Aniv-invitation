@@ -29,7 +29,22 @@ const BARS: { bass: number; chord: number[]; melody: [number, number] }[] = [
   { bass: 43, chord: [59, 62, 67], melody: [71, 74] },
 ];
 
-type Listener = (state: { started: boolean; muted: boolean }) => void;
+/** A tiny silent WAV (0.5s), used to wake up iPhone audio. */
+function silentWav() {
+  const rate = 8000;
+  const samples = rate / 2;
+  const buf = new ArrayBuffer(44 + samples);
+  const v = new DataView(buf);
+  const str = (o: number, s: string) => [...s].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+  str(0, "RIFF"); v.setUint32(4, 36 + samples, true); str(8, "WAVE");
+  str(12, "fmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, rate, true); v.setUint32(28, rate, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true);
+  str(36, "data"); v.setUint32(40, samples, true);
+  for (let i = 0; i < samples; i++) v.setUint8(44 + i, 128); // 8-bit silence
+  return URL.createObjectURL(new Blob([buf], { type: "audio/wav" }));
+}
+
+type Listener =(state: { started: boolean; muted: boolean }) => void;
 
 class Music {
   started = false;
@@ -39,6 +54,7 @@ class Music {
   private master?: GainNode;
   private bus?: GainNode;
   private audio?: HTMLAudioElement;
+  private unlocker?: HTMLAudioElement;
   private nextBar = 0;
   private barIndex = 0;
   private timer = 0;
@@ -58,6 +74,9 @@ class Music {
     if (this.started) return;
     this.started = true;
     try {
+      // iPhone: treat this as media playback so the ring/silent switch doesn't mute it
+      const nav = navigator as Navigator & { audioSession?: { type: string } };
+      if (nav.audioSession) nav.audioSession.type = "playback";
       if (config.musicFile) this.startFile();
       else this.startSynth();
       document.addEventListener("visibilitychange", this.onVisibility);
@@ -89,6 +108,10 @@ class Music {
       if (hidden) this.audio.pause();
       else this.audio.play().catch(() => {});
     }
+    if (this.unlocker) {
+      if (hidden) this.unlocker.pause();
+      else this.unlocker.play().catch(() => {});
+    }
     if (this.ctx) {
       if (hidden) this.ctx.suspend();
       else this.ctx.resume();
@@ -99,10 +122,12 @@ class Music {
   private startFile() {
     const audio = new Audio(`${BASE}/${config.musicFile}`);
     audio.loop = true;
+    audio.preload = "auto";
+    audio.setAttribute("playsinline", "");
     audio.volume = 0;
     this.audio = audio;
-    audio.play().catch(() => {});
-    // gentle fade in
+    audio.play().catch(() => {}); // must happen right inside her tap
+    // gentle fade in (iPhones ignore volume and simply play at full volume)
     let v = 0;
     const fade = window.setInterval(() => {
       v = Math.min(0.8, v + 0.04);
@@ -116,6 +141,14 @@ class Music {
     const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     const ctx = new Ctx();
     this.ctx = ctx;
+    ctx.resume().catch(() => {}); // iPhone can create it "suspended" even inside a tap
+
+    // Older iPhones: a silent looping <audio> switches the phone into media-playback mode,
+    // so the generated music isn't muted by the silent switch
+    this.unlocker = new Audio(silentWav());
+    this.unlocker.loop = true;
+    this.unlocker.setAttribute("playsinline", "");
+    this.unlocker.play().catch(() => {});
 
     const master = ctx.createGain();
     master.gain.setValueAtTime(0, ctx.currentTime);

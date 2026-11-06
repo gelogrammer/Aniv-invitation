@@ -8,7 +8,7 @@ export const config = {
   dinnerTime: "", // optional, e.g. "7:00 PM"
   // Background music. Leave empty for the built-in music box, or put your song in
   // public/music/ and set e.g. "music/our-song.mp3"
-  musicFile: "",
+  musicFile: "music/our-song.mp3", // "I've Been Waiting For You" (guitar cover)
 };
 
 const mapsSearch = (q: string) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;

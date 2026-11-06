@@ -1,14 +1,20 @@
 import type { NextConfig } from "next";
 
-// Static export so the site can be hosted on GitHub Pages.
-// The deploy workflow sets PAGES_BASE_PATH to "/Aniv-invitation".
-const basePath = process.env.PAGES_BASE_PATH || "";
+const LIVE_SITE = "https://happy-1st-anniversary-mylove.pages.dev";
+const isDev = process.env.NODE_ENV === "development";
 
-const nextConfig: NextConfig = {
-  output: "export",
-  basePath,
-  env: { NEXT_PUBLIC_BASE_PATH: basePath }, // so photo URLs work on GitHub Pages too
-  images: { unoptimized: true },
-};
+const nextConfig: NextConfig = isDev
+  ? {
+      // `npm run dev`: the polaroid photo API only runs on Cloudflare,
+      // so forward /api calls to the live site while testing locally.
+      async rewrites() {
+        return [{ source: "/api/:path*", destination: `${LIVE_SITE}/api/:path*` }];
+      },
+    }
+  : {
+      // `npm run build` / deploy: plain static files for Cloudflare Pages
+      output: "export",
+      images: { unoptimized: true },
+    };
 
 export default nextConfig;

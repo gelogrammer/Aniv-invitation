@@ -25,8 +25,9 @@ export default function Envelope({ gone, onOpen }: { gone: boolean; onOpen: () =
     setOpen(true);
     music.start(); // her tap is what lets the browser play sound
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    // Let the seal break and the flap lift, then flash through our photos
-    window.setTimeout(() => setFlashing(true), reduce ? 0 : 1000);
+    // Seal breaks and the card slides out (~1.25s), then the card stays up
+    // for 5 seconds before the photos start
+    window.setTimeout(() => setFlashing(true), reduce ? 5000 : 6250);
   };
 
   if (removed) return null;
@@ -43,9 +44,9 @@ export default function Envelope({ gone, onOpen }: { gone: boolean; onOpen: () =
         >
           <div className="env-back" />
           <div className="env-letter" aria-hidden="true">
-            <small>You&apos;re invited</small>
-            <strong>Happy 1st</strong>
-            <em>Anniversary · Dec 5–7</em>
+            <small>Dec 5–7</small>
+            <strong>Happy anniversary</strong>
+            <em className="env-letter-love">my love!</em>
           </div>
           <div className="env-side left" />
           <div className="env-side right" />
